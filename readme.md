@@ -10,6 +10,6 @@
     8.  IPv4 адресация
     9.  IPv6 адресация
 - Лабораторные работы
-    - [Команды IOS. Базовая конфигурация устройств](/main/Lab_01/lab_03.md)
-    - [Канальный уровень. Ethernet ](/main/Lab_01/lab_02.md)
-    - [IPv4 адресация ](/main/Lab_01/lab_03.md)
+    - [Команды IOS. Базовая конфигурация устройств](OTUS_Network_Basic/main/Lab_01/lab_03.md)
+    - [Канальный уровень. Ethernet ](OTUS_Network_Basic/main/Lab_01/lab_02.md)
+    - [IPv4 адресация ](OTUS_Network_Basic/main/Lab_01/lab_03.md)

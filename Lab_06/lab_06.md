@@ -30,7 +30,7 @@ VLAN      |    ИМЯ    |      Интерфейс                |
 30        | Operations|   S2: F0/19                   |                                     
 999       | Native    |   -------------               |                                     
 100       | Self      |   -------------               |                                     
-1000      | Parking   |   S1: F0/2-4, F0/7-24         |                                     
+1000      | Parking   |   S1: F0/2-5, F0/7-24         |                                     
 1000      | Parking   |   S2: F0/2-17, F0/19-24, G0/2 |                                     
 -------------------------------------------------------------
 
@@ -41,97 +41,103 @@ VLAN      |    ИМЯ    |      Интерфейс                |
     Часть 4. Настройка маршрутизации между сетями VLAN
     Часть 5. Проверка, что маршрутизация между VLAN работает
 
-
-
 Примечание: вместо указанного в задании роутера Cisco 4221 (отсутствует в оборудовании) использован Cisco 4231
 
 -----------------------------------------------------
 
 # Часть 1. Настройка основных параметров устройств
 
-1.1. Создали сеть согласно топологии
+1.1 - 1.4 Создали сеть согласно топологии
+Базовая настройка роутера и коммутаторов на основве файла настроек.
+Рекомендуется делать на окончательном этапе, чтобы часто не вводить пароли
+Поменять: 
 
-1.2. Выполним инициализацию и перезагрузку маршрутизатора и коммутатора.
-Для этого ввести при входе комманды (при необходимости, если уст-ва ранее были сконфигурированы):
+    hostname & ip domain-name 
+соответствующие тому оборудованию на котором будет накатываться конфигурация
 
-    write erase
-    delete vlan.dat
+перед копированием и вставкой
+Зайти в режим глобальной конфигурации
 
-1.3. Настройка маршрутизатора
+(config)# 
+
+    service password-encryption
+    !
+    hostname S2
+    !
+    enable secret 5 $1$mERr$9cTjUIEqNGurQiFU.ZeCi1
+    !
+    no ip domain-lookup
+    ip domain-name S2
+    !
+    username admin secret 5 $1$mERr$hx5rVt7rPNoS4wqbXKX7m0
+    !
+    banner motd # Unauthorized access is prohibited! #
+    !
+    line con 0
+    password 7 0822455D0A16
+    login
+    exec-timeout 5 0
+    !
+    line vty 0 4
+    exec-timeout 5 0
+    password 7 0822455D0A16
+    login local
+    transport input ssh
+    line vty 5 15
+    exec-timeout 5 0
+    password 7 0822455D0A16
+    login local
+    transport input ssh
+    !
+    end
+
+Выполнить комманды
+
+    (config)# crypto key generate rsa general-keys modulus 1024
+    (config)# ip ssh version 2
+    #w
+    #reload
+Генерация ssh-ключа на основе локальных данных конфигурации, переключение на новую версию ssh, сохранение и перезагрузка обррудования.
+
+# Часть 2. Создание сетей VLAN и назначение портов коммутатора
+2.1 Создаем сети VLAN на коммутаторах.
+
+    vlan 10
+    name Management
+    vlan 20
+    name Sales
+    vlan 30 
+    name Operation
+    vlan 999 
+    name Native
+    vlan 1000
+    name Parking
     
-    ROUTER(config)# hostname R1 
-    R1(config)# ip domain-name R1
-    R1(config)# ip ssh version 2
-    R1(config)# crypto key generate rsa general-keys modulus 1024
-    R1(config)# username admin privilege 15 secret cisco
-    R1(config)# enable secret class 
-    R1(config)# service password-encryption
-    R1(config)# no ip domain-lookup	
-    R1(config)# banner motd # Unauthorized access is prohibited! #
-    R1(config)# line console 0
-    R1(config-line)# password cisco
-    R1(config-line)# login	
-    R1(config)#line vty 0 15
-    R1(config-line)#password cisco
-    R1(config-line)#login local
-    R1(config-line)#transport input ssh 
-    R1(config-line)#exec-timeout 5 0
-    R1(config)#line aux 0
-    R1(config-line)#login
-    R1(config-if)# int g0/0/1
-    R1(config-if)# ip addr 192.168.1.1 255.255.255.0
-    R1(config-if)# no shutdown
-    R1# write memory (copy running-config startup-config)
+    interface range F0/2-5, F0/7-24          (для S1) или
+    interface range F0/2-17, F0/19-24, G0/2  (для S2)
+    switchport mode access 
+    switchport access vlan 1000
 
-1.4. Настройте компьютер PC1
-В панели ПК вносим настройки согласно таблиц.
+2.2. Назначим сети VLAN соответствующим интерфейсам коммутатора.
+    
+    interface F0/6                           (для S1) или
+    interface F0/18                          (для S2)
+    switchport mode access 
+    switchport access vlan 20                (для S1) или
+    switchport access vlan 30                (для S2) 
 
-1.5. Проверка подключение к сети
-![](../Lab_05/lab_05_1.jpg)
+# Часть 3. Конфигурация магистрального канала стандарта 802.1Q между коммутаторами
 
-# Часть 2. Настройка маршрутизатора для доступа по протоколу SSH
-2.1 - 2.5 проделаны в 1.3.
+3.1 Вручную настроим магистральный интерфейс на коммутаторах S1 и S2.
 
-2.6. Важно установлен 
-     
-     username: admin & password: cisco
-     username: adm1nP & password: @55 - для проверки использования локальной базы пользователей
-
-![](../Lab_05/lab_05_2.jpg)
-
-# Часть 3. Настройка коммутатора для доступа по протоколу SSH
-
-3.1 - 3.2 Настройка коммутатора.
-
-    SWITCH(config)# hostname S1 
-    S1(config)# ip domain-name S1
-    S1(config)# ip ssh version 2
-    S1(config)# crypto key generate rsa general-keys modulus 1024
-    S1(config)# username admin privilege 15 secret cisco
-    S1(config)# username adm1nP privilege 15 secret @55
-    S1(config)# enable secret class 
-    S1(config)# service password-encryption
-    S1(config)# no ip domain-lookup	
-    S1(config)# banner motd # Unauthorized access is prohibited! #
-    S1(config)# line console 0
-    S1(config-line)# password cisco
-    S1(config-line)# login	
-    S1(config)#line vty 0 15
-    S1(config-line)#password cisco
-    S1(config-line)#login local
-    S1(config-line)#transport input ssh 
-    S1(config-line)#exec-timeout 5 0
-    S1(config-if)# int vlan 1
-    S1(config-if)# ip addr 192.168.1.11 255.255.255.0
-    S1(config-if)# no shutdown
+    
     S1# write memory
     
-3.3. Важно установлен 
+3.2. Вручную настроим магистральный интерфейс G0/2 на коммутаторе S1 
      
      username: admin & password: cisco
      username: adm1nP & password: @55 - для проверки использования локальной базы пользователей
 
-![](../Lab_05/lab_05_3.jpg)
 
 # Часть 4. Настройка протокола SSH с использованием интерфейса командной строки (CLI) коммутатора
 

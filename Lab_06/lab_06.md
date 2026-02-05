@@ -135,34 +135,65 @@ VLAN      |    ИМЯ    |      Интерфейс                |
     switchport trunk native vlam 999
     switchport trunk allowed vlan 10,20,30,999
     switchport nonegotiate 
-    
+
+Последней коммандой отключаем DTP
+
+Проверка
+
+    sh vlan brief 
+    sh interfaces trunk   
+
     
 3.2. Вручную настроим магистральный интерфейс G0/2 на коммутаторе S1 
      
-     username: admin & password: cisco
-     username: adm1nP & password: @55 - для проверки использования локальной базы пользователей
+    interface GigabitEthernet0/2
+    switchport mode trunk
+    switchport trunk native vlan 999
+---------------------------------------------------
+    Вопрос: Что произойдет, если G0/0/1 на R1 будет отключен?
+    Ответ: Симуляция показала, что т.к. пакеты идут через R1, то сеть перестанет работать.
 
 
-# Часть 4. Настройка протокола SSH с использованием интерфейса командной строки (CLI) коммутатора
+# Часть 4. Настройка маршрутизации между сетями VLAN
 
-4.1 - 4.2. Установим соединение
+4.1. Настройте маршрутизатор.
 
-![](../Lab_05/lab_05_4.jpg)
+Настраиваем подинтерфесы для VLAN
 
-Вопрос: Как предоставить доступ к сетевому устройству нескольким пользователям, у каждого из которых есть собственное имя пользователя?
+    interface GigabitEthernet0/0/1.10
+    description Management
+    encapsulation dot1Q 10
+    ip address 192.168.10.1 255.255.255.0
+    
+    interface GigabitEthernet0/0/1.20
+    description Sales
+    encapsulation dot1Q 20
+    ip address 192.168.20.1 255.255.255.0
 
-    Ответ : требуется создать в локальной базе пользователей несколько пользователей и в интерфесей VTY прописать чтобы данные брались из этой базы
+    interface GigabitEthernet0/0/1.30
+    description Operations
+    encapsulation dot1Q 30
+    ip address 192.168.30.1 255.255.255.0
 
-        S1(config)# username admin privilege 15 secret cisco
-        S1(config)# username adm1nP privilege 15 secret @55
-        S1(config)# line vty 0 15
-        S1(config-line)# password cisco
-        S1(config-line)# login local
+    interface GigabitEthernet0/0/1.999
+    encapsulation dot1Q 999 native
 
+
+# Часть 5. Проверbv, работает ли маршрутизация между VLAN
+
+5.1. Выполните следующие тесты с PC1. Все должно быть успешно.
+
+![](../Lab_06/lab_06_2.jpg)
+![](../Lab_06/lab_06_3.jpg)
+![](../Lab_06/lab_06_4.jpg)
+
+5.2. Выполним с PC2 комманту: tracert 192.168.20.3
+
+![](../Lab_06/lab_06_1.jpg)
 
 Файл схемы сети [здесь](Lab_06/lab_06.pkt).
 
-- [Вернуться на основную страницу ](readme.md)
+- [Вернуться на основную страницу ](..readme.md)
 
 
 

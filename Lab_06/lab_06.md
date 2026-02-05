@@ -27,7 +27,7 @@ VLAN      |    ИМЯ    |      Интерфейс                |
 10        | Management|   S1: VLAN10                  |                                    
 10        | Management|   S2: VLAN10                  |                                    
 20        | Sales     |   S1: F0/6                    |                                     
-30        | Operations|   S2: F0/19                   |                                     
+30        | Operations|   S2: F0/18                   |                                     
 999       | Native    |   -------------               |                                     
 100       | Self      |   -------------               |                                     
 1000      | Parking   |   S1: F0/2-5, F0/7-24         |                                     
@@ -130,8 +130,12 @@ VLAN      |    ИМЯ    |      Интерфейс                |
 
 3.1 Вручную настроим магистральный интерфейс на коммутаторах S1 и S2.
 
+    interface g0/1
+    switchport mode trunk
+    switchport trunk native vlam 999
+    switchport trunk allowed vlan 10,20,30,999
+    switchport nonegotiate 
     
-    S1# write memory
     
 3.2. Вручную настроим магистральный интерфейс G0/2 на коммутаторе S1 
      
@@ -157,6 +161,8 @@ VLAN      |    ИМЯ    |      Интерфейс                |
 
 
 Файл схемы сети [здесь](Lab_06/lab_06.pkt).
+
+- [Вернуться на основную страницу ](readmemd.md)
 
 
 

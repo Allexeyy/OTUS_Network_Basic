@@ -5,20 +5,7 @@
 ТОПОЛОГИЯ
 
 ![](Lab_09.jpg)
-
-Таблица алресации
-                    
-Устройство| Интерфейс |    IPv4 адресс     |  Маска подсети   |      Шлюз       |
-----------| --------- |--------------------|------------------|-----------------|
-R1        | G0/0/1.10 |   192.168.10.1     |  255.255.255.0   |          ---    |
-R1        | G0/0/1.20 |   192.168.20.1     |  255.255.255.0   |          ---    |
-R1        | G0/0/1.30 |   192.168.30.1     |  255.255.255.0   |          ---    |
-R1        | G0/0/1.999|   -----------      |  255.255.255.0   |          ---    |
-S1        | VLAN10    |   192.168.10.11    |  255.255.255.0   |   192.168.10.1  |
-S2        | VLAN10    |   192.168.10.12    |  255.255.255.0   |   192.168.10.1  |
-PC1       | NIC       |   192.168.20.3     |  255.255.255.0   |   192.168.20.1  |
-PC2       | NIC       |   192.168.30.3     |  255.255.255.0   |   192.168.30.1  |
--------------------------------------------------------------
+![](Lab_09_12.jpg)
 
 # Цели
     Часть 1. Настройка основного сетевого устройства
@@ -39,156 +26,179 @@ PC2       | NIC       |   192.168.30.3     |  255.255.255.0   |   192.168.30.1  
     •	Реализация PortFast и BPDU Guard
     •	Проверка сквозной связанности.
 
-
 Примечание: вместо указанного в задании роутера Cisco 4221 (отсутствует в оборудовании) использован Cisco 4231
-
 -----------------------------------------------------
 
-# Часть 1. Настройка основных параметров устройств
+# Часть 1. Настройка основного сетевого устройства
 
-1.1 - 1.4 Создали сеть согласно топологии
+1.1 - 1.2 Создали и настройка сети согласно топологии
 Базовая настройка роутера и коммутаторов на основве файла настроек.
-Рекомендуется делать на окончательном этапе, чтобы часто не вводить пароли
-Поменять: 
 
-    hostname & ip domain-name 
-соответствующие тому оборудованию на котором будет накатываться конфигурация
-
-перед копированием и вставкой
-Зайти в режим глобальной конфигурации
-
-(config)# 
-
-    service password-encryption
+    enable
+    configure terminal
+    hostname R1
+    no ip domain lookup
+    ip dhcp excluded-address 192.168.10.1 192.168.10.9
+    ip dhcp excluded-address 192.168.10.201 192.168.10.202
+    ip dhcp relay information trust-all
     !
-    hostname S2
+    ip dhcp pool Students
+    network 192.168.10.0 255.255.255.0
+    default-router 192.168.10.1
+    domain-name CCNA2.Lab-11.6.1
     !
-    enable secret 5 $1$mERr$9cTjUIEqNGurQiFU.ZeCi1
+    interface Loopback0
+    ip address 10.10.1.1 255.255.255.0
     !
-    no ip domain-lookup
-    ip domain-name S2
-    !
-    username admin secret 5 $1$mERr$hx5rVt7rPNoS4wqbXKX7m0
-    !
-    banner motd # Unauthorized access is prohibited! #
+    interface GigabitEthernet0/0/1
+    description Link to S1
+    ip address 192.168.10.1 255.255.255.0
+    no shutdown
     !
     line con 0
-    password 7 0822455D0A16
-    login
-    exec-timeout 5 0
-    !
-    line vty 0 4
-    exec-timeout 5 0
-    password 7 0822455D0A16
-    login local
-    transport input ssh
-    line vty 5 15
-    exec-timeout 5 0
-    password 7 0822455D0A16
-    login local
-    transport input ssh
-    !
-    end
+    logging synchronous
+    exec-timeout 0 0
+Загружена текущая конфигурация на R1 и проведена успешная проверка, согласно задания.
+![](Lab_09_1.jpg)
 
-Выполнить комманды
+1.3. Настройка и проверка основных параметров коммутатора
+Настройка коммутаторов S1 & S2 (соответственно)
 
-    (config)# crypto key generate rsa general-keys modulus 1024
-    (config)# ip ssh version 2
-    #w
-    #reload
-Генерация ssh-ключа на основе локальных данных конфигурации, переключение на новую версию ssh, сохранение и перезагрузка обррудования.
+    S1
+    Switch(config)#hostname S1
+    S1(config)#no ip domain-name 
+    S1(config)#ip default-gateway 192.168.10.1
+    S1(config)#interface f0/6                       (для S2 только f0/18)
+    S1(config-if)#switchport mode access
+    S1(config-if)#switchport access vlan 10
+    S1(config)#interface vlan 10
+    S1(config-if)#ip address 192.168.10.201 255.255.255.0
+    S1(config)#vlan 10
+    S1(config-vlan)#name Management
+    S1(config)#vlan 333
+    S1(config-vlan)#name Native
+    S1(config)#vlan 999
+    S1(config-vlan)#name ParkingLot
+    S1(config)#interface f0/5, f0/1                 (для S2 только f0/1)
+    S1(config-if)#switchport mode trunk 
+    S1(config-if)#switchport trunk native vlan 333
+    S1(config-if)#switchport trunk allowed vlan 10,333,999
+    S1(config)#interface f0/1
+    S1(config-if)#switchport nonegotiate 
+        S1(config)#interface range f0/2-4,f0/7-24,g0/1-2
+        S1(config-if-range)#switchport mode access 
+        S1(config-if-range)#switchport access vlan 999
+        S1(config-if-range)#shutdown 
 
-# Часть 2. Создание сетей VLAN и назначение портов коммутатора
-2.1 Создаем сети VLAN на коммутаторах.
+    S2  (изменнная часть для S2 - выключение неиспользуемых интерфейсов)
+        S2(config)#interface range f0/2-17, f0/19-24, g0/1-2
+        S2(config-if-range)#switchport mode access 
+        S2(config-if-range)#switchport access vlan 999
+        S2(config-if-range)#shutdown 
 
-    vlan 10
-    name Management
-    vlan 20
-    name Sales
-    vlan 30 
-    name Operation
-    vlan 999 
-    name Native
-    vlan 1000
-    name Parking
+
+# Часть 2. Настройка сетей VLAN
+2.1 - 2.4. Создаем и настраиваем сети VLAN на коммутаторах.
+
+Настройка приведена в части 1й (выше)
+
+# Часть 3. Настройки безопасности коммутатора.
+
+3.1 Релизация магистральных соединений 802.1Q
+
+    R1(config)#interface g0/0/1.10
+    R1(config-subif)#encapsulation dot1Q 10
+    R1(config-subif)#ip address 192.168.10.1 255.255.255.0
+    R1(config)#interface g0/0/1.333
+    R1(config-subif)#encapsulation dot1Q 333 native 
+
+Настройка портов на S1 & S2 в режимах транкинга приведена в п. 1.3.
+Комманда для проверки трануинговых соединений и ответ на нее соответствуют уазанной в инструкции для обоих коммутаторов
+![](Lab_09_2.jpg)
+
+
+3.2. - 3.3. Настройка портов доступа для S1 & S2 и безопасность неиспользуемых портов коммутатора
+
+Настройка приведена в п.1.3.
+![](Lab_09_3.jpg)
+![](Lab_09_4.jpg)
     
-    interface range F0/2-5, F0/7-24          (для S1) или
-    interface range F0/2-17, F0/19-24, G0/2  (для S2)
-    switchport mode access 
-    switchport access vlan 1000
+3.4. Документирование и реализация функций безопасности порта
 
-2.2. Назначим сети VLAN соответствующим интерфейсам коммутатора.
-    
-    interface F0/6                           (для S1) или
-    interface F0/18                          (для S2)
-    switchport mode access 
-    switchport access vlan 20                (для S1) или
-    switchport access vlan 30                (для S2) 
+![](Lab_09_13.jpg)
 
-# Часть 3. Конфигурация магистрального канала стандарта 802.1Q между коммутаторами
+или
 
-3.1 Вручную настроим магистральный интерфейс на коммутаторах S1 и S2.
+![](Lab_09_5.jpg)
 
-    interface g0/1
-    switchport mode trunk
-    switchport trunk native vlam 999
-    switchport trunk allowed vlan 10,20,30,999
-    switchport nonegotiate 
+проводим уазаннык настройки
 
-Последней коммандой отключаем DTP
+    S1(config)#interface f0/6
+    S1(config-if)#switchport port-security 
+    S1(config-if)#switchport port-security maximum 3
+    S1(config-if)#switchport port-security violation restrict 
+    S1(config-if)#switchport port-security aging time 60
+    Aging Type : Inactivity - не настраивается нет команды
 
-Проверка
+![](Lab_09_6.jpg)
+![](Lab_09_7.jpg)
 
-    sh vlan brief 
-    sh interfaces trunk   
+Теперь настраиваем безопасность для S2 - f0/18
 
-    
-3.2. Вручную настроим магистральный интерфейс G0/2 на коммутаторе S1 
-     
-    interface GigabitEthernet0/2
-    switchport mode trunk
-    switchport trunk native vlan 999
----------------------------------------------------
-    Вопрос: Что произойдет, если G0/0/1 на R1 будет отключен?
-    Ответ: Симуляция показала, что т.к. пакеты идут через R1, то сеть перестанет работать.
+    S2(config)#interface f0/18
+    S2(config-if)#switchport port-security 
+    S2(config-if)#switchport port-security maximum 2
+    S2(config-if)#switchport port-security violation protect 
+    S2(config-if)#switchport port-security aging time 60
+    Aging Type : Inactivity - не настраивается нет команды
 
+![](Lab_09_8.jpg)
+![](Lab_09_9.jpg)
 
-# Часть 4. Настройка маршрутизации между сетями VLAN
+3.5. Реализоваем безопасность DHCP snooping
 
-4.1. Настройте маршрутизатор.
+    S1(config)#ip dhcp snooping
+    S1(config)#ip dhcp snooping vlan 10
+    S1(config)#interface fastEthernet 0/1
+    S1(config-if)#ip dhcp snooping trust 
+    S1(config)#interface fastEthernet 0/6
+    S1(config-if)#ip dhcp snooping limit rate 5
 
-Настраиваем подинтерфесы для VLAN
+    S2(config)#ip dhcp snooping
+    S2(config)#ip dhcp snooping vlan 10
+    S2(config)#interface f0/1
+    S2(config-if)#ip dhcp snooping trust 
+    S2(config)#interface f0/18
+    S2(config-if)#ip dhcp snooping limit rate 6
 
-    interface GigabitEthernet0/0/1.10
-    description Management
-    encapsulation dot1Q 10
-    ip address 192.168.10.1 255.255.255.0
-    
-    interface GigabitEthernet0/0/1.20
-    description Sales
-    encapsulation dot1Q 20
-    ip address 192.168.20.1 255.255.255.0
+![](Lab_09_10.jpg)
+![](Lab_09_11.jpg)
 
-    interface GigabitEthernet0/0/1.30
-    description Operations
-    encapsulation dot1Q 30
-    ip address 192.168.30.1 255.255.255.0
+3.6. Реализация PortFast и BPDU Guard на портах для оконечных устройств
 
-    interface GigabitEthernet0/0/1.999
-    encapsulation dot1Q 999 native
+    S1(config)#interface f0/6
+    S1(config-if)#spanning-tree portfast 
+    S1(config-if)#spanning-tree bpduguard enable
 
+    S2(config)#interface f0/18
+    S2(config-if)#spanning-tree portfast 
+    S2(config-if)#spanning-tree bpduguard enable
 
-# Часть 5. Проверка, работает ли маршрутизация между VLAN
+![](Lab_09_14.jpg)
 
-5.1. Выполните следующие тесты с PC1. Все должно быть успешно.
+3.7. Пинги все проходят.
 
-![](../Lab_06/lab_06_2.jpg)
-![](../Lab_06/lab_06_3.jpg)
-![](../Lab_06/lab_06_4.jpg)
+Вопросы для повторения:
 
-5.2. Выполним с PC2 комманту: tracert 192.168.20.3
+    1.	С точки зрения безопасности порта на S2, почему нет значения таймера для оставшегося возраста в минутах, когда было сконфигурировано динамическое обучение - sticky?
+    Ответ: Неправильный вопрос. Но насколько я понимаю его смысл - то при динамической настройке адоеса сами удаляются по истечению времени, а при настройке sticky mac-адрес вносятся в таблицу маршрутизации вручную и удалить их можно тоже вручную поэтому таймер времени уже не имеет смысла.
 
-![](../Lab_06/lab_06_1.jpg)
+    2.	Что касается безопасности порта на S2, если вы загружаете скрипт текущей конфигурации на S2, почему порту 18 на PC-B никогда не получит IP-адрес через DHCP?
+    Ответ: Мы в ходе работы не вносили скрипт настроек на S2 только на R1, пдозреваю вопрос в этом - скорее всего не будет работать т.к. собьются настройки "роутера на палочке"
+
+    3.	Что касается безопасности порта, в чем разница между типом абсолютного устаревания и типом устаревание по неактивности?
+    Ответ: Разница в том чт опри абсолютном устаревании mac-адреса удаляются по истечению указанного времени, а по таймеру неактивности только если эти адреса не отвечают указанное время т.е. если ПК включен весь день то он не будет удаляться из иаблицы адресов и только при его выключении, скажем в конце рабочего дня, до утра если время неактивности не перекрывает время выключения адрес будет удален.
+
 
 Файл схемы сети [здесь](Lab_09/lab_09.pkt).
 

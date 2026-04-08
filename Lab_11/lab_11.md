@@ -116,111 +116,113 @@
 
 # Часть 3. Настройте транки (магистральные каналы)
 
-3.1  Реализация различных оптимизаций на каждом маршрутизаторе
+3.1 - 3.2 Настраиваем магистральные транки на S1 и S2 согласно задания, результат:
 
-        R1(config)#interface g 0/0/1
-        R1(config-if)#ip ospf priority 50
-            БЫЛО
-            R1#sh ip ospf neighbor 
-            Neighbor ID     Pri   State           Dead Time   Address         Interface
-            2.2.2.2           1   FULL/DR         00:01:41    10.53.0.2       GigabitEthernet0/0/1
+    S2#show interfaces trunk 
+    Port        Mode         Encapsulation  Status        Native vlan
+    Fa0/1       on           802.1q         trunking      666
 
-            R2#sh ip os ne
-            Neighbor ID     Pri   State           Dead Time   Address         Interface
-            1.1.1.1           1   FULL/BDR        00:01:58    10.53.0.1       GigabitEthernet0/0/1
+    Port        Vlans allowed on trunk
+    Fa0/1       20,30,40,666
 
-            СТАЛО    
-            R1#sh ip ospf neighbor 
-            Neighbor ID     Pri   State           Dead Time   Address         Interface
-            2.2.2.2           1   FULL/BDR        00:01:41    10.53.0.2       GigabitEthernet0/0/1
+    Port        Vlans allowed and active in management domain
+    Fa0/1       20,30,40,666
 
-            R2#sh ip os ne
-            Neighbor ID     Pri   State           Dead Time   Address         Interface
-            1.1.1.1          50   FULL/DR         00:01:58    10.53.0.1       GigabitEthernet0/0/1
+    Port        Vlans in spanning tree forwarding state and not pruned
+    Fa0/1       20,30,40,666
 
+    S1# show interfaces trunk 
+    Port        Mode         Encapsulation  Status        Native vlan
+    Fa0/1       on           802.1q         trunking      666
+    Fa0/5       on           802.1q         trunking      666
 
-        R1(config-if)#ip ospf hello-interval 30
-        R1(config-if)#ip ospf dead-interval 120
+    Port        Vlans allowed on trunk
+    Fa0/1       20,30,40,666
+    Fa0/5       20,30,40,666
 
-        R1(config)#ip route 0.0.0.0 0.0.0.0 loopback 1
-        %Default route without gateway, if not a point-to-point interface, may impact performance
-        R1(config)#router ospf 56
-        R1(config-router)#default-information originate 
+    Port        Vlans allowed and active in management domain
+    Fa0/1       20,30,40,666
+    Fa0/5       20,30,40,666
 
-    R2(config)#interface loopback 1
-    R2(config-if)#ip ospf network point-to-point 
-    
-    R1#sh ip route ospf 
-        БЫЛО
-        192.168.1.0/32 is subnetted, 1 subnets
-    O       192.168.1.1 [110/2] via 10.53.0.2, 00:10:02, GigabitEthernet0/0/1
-    
-        СТАЛО
-    O    192.168.1.0 [110/2] via 10.53.0.2, 00:01:13, GigabitEthernet0/0/1
+    Port        Vlans in spanning tree forwarding state and not pruned
+    Fa0/1       20,30,40,666
+    Fa0/5       20,30,40,666
 
-            R2(config)#router ospf 56
-            R2(config-router)#passive-interface loopback 1   
+# Часть 4. Настроим маршрутизацию
 
-            R1#sh ip ospf interface g 0/0/1
-            БЫЛО
-            GigabitEthernet0/0/1 is up, line protocol is up
-            Internet address is 10.53.0.1/24, Area 0
-            Process ID 56, Router ID 1.1.1.1, Network Type BROADCAST, Cost: 1
+4.1 - 4.2 Настраиваем интерфейсы на R1 и R2 согласно задания, результат:
 
-            СТАЛО
-            GigabitEthernet0/0/1 is up, line protocol is up
-            Internet address is 10.53.0.1/24, Area 0
-            Process ID 56, Router ID 1.1.1.1, Network Type BROADCAST, Cost: 35     
+    R1#show ip interface brief 
+    Interface              IP-Address      OK? Method Status                Protocol 
+    GigabitEthernet0/0/0   192.20.0.1      YES manual up                    up 
+    GigabitEthernet0/0/1   unassigned      YES NVRAM  up                    up 
+    GigabitEthernet0/0/1.2010.20.0.1       YES manual up                    up 
+    GigabitEthernet0/0/1.3010.30.0.1       YES manual up                    up 
+    GigabitEthernet0/0/1.4010.40.0.1       YES manual up                    up 
+    GigabitEthernet0/0/1.666unassigned      YES unset  up                    up 
+    GigabitEthernet0/0/2   unassigned      YES NVRAM  administratively down down 
+    Loopback1              172.16.1.1      YES manual up                    up 
+    Vlan1                  unassigned      YES unset  administratively down down
 
+    R2#show ip interface brief 
+    Interface              IP-Address      OK? Method Status                Protocol 
+    GigabitEthernet0/0/0   unassigned      YES unset  administratively down down 
+    GigabitEthernet0/0/1   10.20.0.4       YES manual up                    up 
+    GigabitEthernet0/0/2   unassigned      YES unset  administratively down down 
+    Vlan1                  unassigned      YES unset  administratively down down
 
 
-3.2. Убедитесь, что оптимизация OSPFv2 реализовалась.
+# Часть 5. Настроим удаленный доступ.
 
-    R1#show ip ospf interface g0/0/1 
+5.1. Настроим все сетевые устройства для базовой поддержки SSH
 
-    GigabitEthernet0/0/1 is up, line protocol is up
-    Internet address is 10.53.0.1/24, Area 0
-    Process ID 56, Router ID 1.1.1.1, Network Type BROADCAST, Cost: 35
-    Transmit Delay is 1 sec, State DR, Priority 50
-    Designated Router (ID) 1.1.1.1, Interface address 10.53.0.1
-    Backup Designated Router (ID) 2.2.2.2, Interface address 10.53.0.2
-    Timer intervals configured, Hello 30, Dead 120, Wait 120, Retransmit 5
-        Hello due in 00:00:09
-    Index 1/1, flood queue length 0
-    Next 0x0(0)/0x0(0)
-    Last flood scan length is 1, maximum is 1
-    Last flood scan time is 0 msec, maximum is 0 msec
-    Neighbor Count is 1, Adjacent neighbor count is 1
-        Adjacent with neighbor 2.2.2.2  (Backup Designated Router)
-    Suppress hello for 0 neighbor(s)
+Приводится пример для роутера R1 (для всех сетевых устройств аналогично)
 
+                                Настройка инфтерфейса
+    R1(config)# line vty 0 15
+    R1(config-line)# password cisco
+    R1(config-line)# login
+    R1(config-line)# login local
+    R1(config-line)# transport input ssh
+    R1(config-line)# exec-timeout 5 0 
+    R1(config-line)# exit
 
-            R2#ping 172.16.1.1
+                                Настройка SSH и доступа
+    R1(config)# no ip domain-lookup
+    R1(config)# ip domain-name ccna-lab.com
+    R1(config)# crypto key generate rsa general-keys modulus 1024
+    R1(config)# ip ssh version 2
+    R1(config)# username SSHadmin privilege 15 secret $cisco123!
 
-            Type escape sequence to abort.
-            Sending 5, 100-byte ICMP Echos to 172.16.1.1, timeout is 2 seconds:
-            !!!!!
-            Success rate is 100 percent (5/5), round-trip min/avg/max = 0/0/1 ms
+5.2. Задания этого пункта 
 
+    R1(config)# ip http secure-server 
+    R1(config)# ip http authentication local
+Не выполняются т.к. Cisco Packet Tracer их не поддерживает
 
-    R2#sh ip route ospf 
-    O*E2 0.0.0.0/0 [110/1] via 10.53.0.1, 00:00:24, GigabitEthernet0/0/1
+# Часть 6. Проверка подключения.
 
-    R1#sh ip route ospf 
-    O    192.168.1.0 [110/36] via 10.53.0.2, 00:00:09, GigabitEthernet0/0/1
+6.1 - 6.2 По результатм работы проведена проверка согласно таблицы
+![](Lab_11_2.jpg)
+Все этапы успешны. Для проверки работы HTTP за R1 подключен HTTP-сервер.
 
+# Часть 7. Настройка и проверка списков контроля доступа (ACL)
 
-Вопросы для повторения:
+Согласно задания внедрены списки доступа
 
-    1.	Какой маршрутизатор является DR? Какой маршрутизатор является BDR? Каковы критерии отбора?
-    Ответ: Изначально при равных приоритетах R1 - BDR, а R2 - DR т.к. ID 2го роутера больше 1го. Когда в п.3.1 согласно задания повысили приоритет R1 до 50, после перезагрузки роутера или очистки процессора их функции поменялись местами (если очистку процесса или перезагрузку не делать, то изменений не будет)
+    R1#show access-lists 
+    Extended IP access list SALES_DENY_WEB
+    4 permit icmp 10.40.0.0 0.0.0.255 10.40.0.0 0.0.0.255 (12 match(es))
+    5 permit tcp any 172.16.1.0 0.0.0.255 (34 match(es))
+    6 permit icmp any 172.16.1.0 0.0.0.255 (4 match(es))
+    10 deny tcp 10.20.0.0 0.0.0.255 10.40.0.0 0.0.0.255 eq www
 
-
-    2.	Почему стоимость OSPF для маршрута по умолчанию отличается от стоимости OSPF в R1 для сети 192.168.1.0/24?
-    Ответ: Т.к. стоимость пути рассчитывается как сумма затрат на подключение по всему пути то разность стоимостей будет различаться на 1 т.к. у нас есть стоимость пути внутри маршрутизатора между внешним интерфейсом и внутренним loopback равным 1
+Для проверки их работы согласно таблицы 
+![](Lab_11_3.jpg)
+проведены успешные тесты доступа. Для проверки работы HTTP за R1 подключен HTTP-сервер.
 
    
-Файл схемы сети [здесь](Lab_10/lab_10.pkt).
+Файл схемы сети [здесь](Lab_11/lab_11.pkt).
 
 - [Вернуться на основную страницу ](/readme.md)
 

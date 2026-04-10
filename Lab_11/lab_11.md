@@ -208,6 +208,44 @@
 
 # Часть 7. Настройка и проверка списков контроля доступа (ACL)
 
+Политика1. Сеть Sales не может использовать SSH в сети Management (но в  другие сети SSH разрешен). 
+
+    Extended IP access list SSH_SALES
+        5 permit tcp any host 172.16.1.1
+        7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
+        10 deny tcp 10.40.0.0 0.0.0.255 any eq 22
+        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
+        20 permit ip any any
+
+    R1(config)#interface g 0/0/1.40
+    R1(config-subif)#ip access-group SSH_SALES in
+
+Политика 2. Сеть Sales не имеет доступа к IP-адресам в сети Management с помощью любого веб-протокола (HTTP/HTTPS). Сеть Sales также не имеет доступа к интерфейсам R1 с помощью любого веб-протокола. Разрешён весь другой веб-трафик (обратите внимание — Сеть Sales  может получить доступ к интерфейсу Loopback 1 на R1).
+
+    Правило 5 политики 1 разрешает доступ из SALES на 172.16.1.1 по HTTP\HTTPS
+        5 permit tcp any host 172.16.1.1
+    Правило 15 политики 1 запрещает вессь HTTP\HTTPS трафик по заданию
+        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
+
+Политика 3. Сеть Sales не может отправлять эхо-запросы ICMP в сети Operations или Management. Разрешены эхо-запросы ICMP к другим адресатам. 
+
+    Правило 7 политики 1 запрещает вессь ICMP трафик в MANAGEMENT
+         7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
+    Правило 10 политики 4 отрабатываетс задачe по фильтрации ICMP пакетов из SALES в OPERATIONS
+        10 deny icmp any 10.40.0.0 0.0.0.255
+        
+
+Политика 4. Cеть Operations  не может отправлять ICMP эхозапросы в сеть Sales. Разрешены эхо-запросы ICMP к другим адресатам.
+
+    Extended IP access list ICMP_SALES
+    10 deny icmp any 10.40.0.0 0.0.0.255
+    20 permit ip any any
+
+    R1(config)#interface g 0/0/1.30
+    R1(config-subif)#ip access-group ICMP_SALES in
+
+
+
 Согласно задания внедрены списки доступа
 
     R1#show access-lists 

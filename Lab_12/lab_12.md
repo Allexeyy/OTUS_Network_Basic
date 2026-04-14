@@ -211,37 +211,26 @@
 Политика1. Сеть Sales не может использовать SSH в сети Management (но в  другие сети SSH разрешен). 
 
     Extended IP access list SSH_SALES
-        10 permit tcp any host 172.16.1.1
-        20 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
-        30 deny tcp 10.40.0.0 0.0.0.255 any eq 22
-        40 deny tcp 10.40.0.0 0.0.0.255 any eq www
-        45 deny tcp 10.40.0.0 0.0.0.255 any eq 443
-        50 permit ip any any
+        5 permit tcp any host 172.16.1.1
+        7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
+        10 deny tcp 10.40.0.0 0.0.0.255 any eq 22
+        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
+        20 permit ip any any
 
     R1(config)#interface g 0/0/1.40
     R1(config-subif)#ip access-group SSH_SALES in
 
 Политика 2. Сеть Sales не имеет доступа к IP-адресам в сети Management с помощью любого веб-протокола (HTTP/HTTPS). Сеть Sales также не имеет доступа к интерфейсам R1 с помощью любого веб-протокола. Разрешён весь другой веб-трафик (обратите внимание — Сеть Sales  может получить доступ к интерфейсу Loopback 1 на R1).
 
-    Правило 10 политики 1 разрешает доступ из SALES на 172.16.1.1 по HTTP\HTTPS
-        10 permit tcp any host 172.16.1.1
-    Правила 40 и 45 политики 1 запрещает вессь HTTP\HTTPS трафик по заданию
-        40 deny tcp 10.40.0.0 0.0.0.255 any eq www
-        45 deny tcp 10.40.0.0 0.0.0.255 any eq 443
-    также эти правила не дают доступ HTTP\HTTPS трафику на интерфесы R1, для доказательства созданы правила 
-        Extended IP access list PROVERKA
-        10 permit tcp any any eq www
-        20 permit tcp any any eq 443
-        30 deny tcp any any eq 443
-        40 deny tcp any any eq www
-
-![](Lab_11_4.jpg)
-На скрине видно что после попытке входа на дополнительный проверочный сервер пакеты задержаны на 10.40.0.1 а через 10.20.0.1 уже ничего не проходит что удовлетворяет условиям задания.
+    Правило 5 политики 1 разрешает доступ из SALES на 172.16.1.1 по HTTP\HTTPS
+        5 permit tcp any host 172.16.1.1
+    Правило 15 политики 1 запрещает вессь HTTP\HTTPS трафик по заданию
+        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
 
 Политика 3. Сеть Sales не может отправлять эхо-запросы ICMP в сети Operations или Management. Разрешены эхо-запросы ICMP к другим адресатам. 
 
-    Правило 20 политики 1 запрещает вессь ICMP трафик в MANAGEMENT
-        20 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
+    Правило 7 политики 1 запрещает вессь ICMP трафик в MANAGEMENT
+         7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
     Правило 10 политики 4 отрабатываетс задачe по фильтрации ICMP пакетов из SALES в OPERATIONS
         10 deny icmp any 10.40.0.0 0.0.0.255
         

@@ -1,24 +1,18 @@
-**_Лабораторная работа №11._**
+**_Лабораторная работа №12._**
 
-*Настройка и проверка расширенных списков контроля доступа*
+*Настройка NAT для IPv4*
 
 ТОПОЛОГИЯ
 
-![](Lab_11.jpg)
-![](Lab_11_0.jpg)
-![](Lab_11_1.jpg)
+![](Lab_12.jpg)
+![](Lab_12_1.jpg)
 
 # Цели
     Часть 1. Создание сети и настройка основных параметров устройства
-    Часть 2. Настройка сетей VLAN на коммутаторах.
-    Часть 3. Настройте транки (магистральные каналы).
-    Часть 4. Настройте маршрутизацию.
-    Часть 5. Настройте удаленный доступ
-    Часть 6. Проверка подключения
-    Часть 7. Настройка и проверка списков контроля доступа (ACL)
+    Часть 2. Настройка и проверка NAT для IPv4
+    Часть 3. Настройка и проверка PAT для IPv4
+    Часть 4. Настройка и проверка статического NAT для IPv4.
 
-
-ВАЖНО: Native VLAN 666
 -----------------------------------------------------
 
 # Часть 1. Создание сети и настройка основных параметров устройства
@@ -65,202 +59,94 @@
     или
     write memory
 
-# Часть 2. ННастройка сетей VLAN на коммутаторах.
+# Часть 2. Настройка и проверка NAT для IPv4.
 
-2.1 - 2.2 Создание и настройка VLAN согласно задачи
+2.1 Настройте NAT на R1, используя пул из трех адресов 209.165.200.226-209.165.200.228
 
-    S1#show vlan brief 
+    R1(config)#ip access-list standard forNAT192
+    R1(config-std-nacl)#permit 192.168.1.0 0.0.0.255
+    R1(config)#ip nat pool NAT192 209.165.200.226 209.165.200.228 netmask 255.255.255.248
+    R1(config)#ip nat inside source list forNAT192 pool NAT192
+    R1(config)#interface g 0/0/1
+    R1(config-if)#ip nat inside 
+    R1(config)#interface g 0/0/0
+    R1(config-if)#ip nat outside 
 
-    VLAN Name                             Status    Ports
-    ---- -------------------------------- --------- -------------------------------
-    1    default                          active    
-    20   Managment                        active    
-    30   Operations                       active    Fa0/6
-    40   Sales                            active    
-    666  NATIVE                           active    
-    999  ParkingLot                       active    Fa0/2, Fa0/3, Fa0/4, Fa0/7
-                                                    Fa0/8, Fa0/9, Fa0/10, Fa0/11
-                                                    Fa0/12, Fa0/13, Fa0/14, Fa0/15
-                                                    Fa0/16, Fa0/17, Fa0/18, Fa0/19
-                                                    Fa0/20, Fa0/21, Fa0/22, Fa0/23
-                                                    Fa0/24, Gig0/1, Gig0/2
-    1000 MySelf                           active    
-    1002 fddi-default                     active    
-    1003 token-ring-default               active    
-    1004 fddinet-default                  active    
-    1005 trnet-default                    active    
-    S1#
+2.2. Проверка конфигурации
 
-    S2#show vlan brief 
+A. Первоначально ping с PC_B не прошел - пробрасывем маршруты на роутерах:
 
-    VLAN Name                             Status    Ports
-    ---- -------------------------------- --------- -------------------------------
-    1    default                          active    
-    20   Managment                        active    Fa0/5
-    30   Operations                       active    
-    40   Sales                            active    Fa0/18
-    666  NATIVE                           active    
-    999  ParkingLot                       active    Fa0/2, Fa0/3, Fa0/4, Fa0/6
-                                                    Fa0/7, Fa0/8, Fa0/9, Fa0/10
-                                                    Fa0/11, Fa0/12, Fa0/13, Fa0/14
-                                                    Fa0/15, Fa0/16, Fa0/17, Fa0/19
-                                                    Fa0/20, Fa0/21, Fa0/22, Fa0/23
-                                                    Fa0/24, Gig0/1, Gig0/2
-    1000 MySelf                           active    
-    1002 fddi-default                     active    
-    1003 token-ring-default               active    
-    1004 fddinet-default                  active    
-    1005 trnet-default                    active    
-    S2#
+    R1(config)#ip route 0.0.0.0 0.0.0.0 209.165.200.225
+    R2(config)#ip route 192.168.1.0 255.255.255.0 209.165.200.230
 
+после прохождения ping на Lo1 (209.165.200.1) смотрим таблицу NAT
 
-# Часть 3. Настройте транки (магистральные каналы)
+    R1#show ip nat translations 
+    Pro  Inside global          Inside local       Outside local      Outside global
+    icmp 209.165.200.226:15     192.168.1.3:15     209.165.200.225:15 209.165.200.225:15
+    icmp 209.165.200.226:16     192.168.1.3:16     209.165.200.225:16 209.165.200.225:16
+    icmp 209.165.200.226:6      192.168.1.3:6      209.165.200.225:6  209.165.200.225:6
 
-3.1 - 3.2 Настраиваем магистральные транки на S1 и S2 согласно задания, результат:
+Вопрос: Во что был транслирован внутренний локальный адрес PC-B?
 
-    S2#show interfaces trunk 
-    Port        Mode         Encapsulation  Status        Native vlan
-    Fa0/1       on           802.1q         trunking      666
+    209.165.200.225
+ 
+Вопрос: Какой тип адреса NAT является переведенным адресом?
 
-    Port        Vlans allowed on trunk
-    Fa0/1       20,30,40,666
+    Outside local
 
-    Port        Vlans allowed and active in management domain
-    Fa0/1       20,30,40,666
+B. Дажее повторяем проверку с PC-A, после прохождения ping на Lo1 (209.165.200.1) смотрим таблицу NAT:
 
-    Port        Vlans in spanning tree forwarding state and not pruned
-    Fa0/1       20,30,40,666
+    R1#show ip nat translations 
+    Pro  Inside global     Inside local       Outside local      Outside global
+    icmp 209.165.200.226:10192.168.1.2:10     209.165.200.1:10   209.165.200.1:10
+    icmp 209.165.200.226:11192.168.1.2:11     209.165.200.1:11   209.165.200.1:11
+    icmp 209.165.200.226:12192.168.1.2:12     209.165.200.1:12   209.165.200.1:12
+    icmp 209.165.200.226:8 192.168.1.2:8      209.165.200.1:8    209.165.200.1:8
+    icmp 209.165.200.226:9 192.168.1.2:9      209.165.200.1:9    209.165.200.1:9
 
-    S1# show interfaces trunk 
-    Port        Mode         Encapsulation  Status        Native vlan
-    Fa0/1       on           802.1q         trunking      666
-    Fa0/5       on           802.1q         trunking      666
+С. - Е. При попытке сделать ping на Lo1 (209.165.200.1) c S1 & S2 первоначально ничего не получается - прописываем адрес роутера:
 
-    Port        Vlans allowed on trunk
-    Fa0/1       20,30,40,666
-    Fa0/5       20,30,40,666
+    S1(config)#ip default-gateway 192.168.1.1
+    S2(config)#ip default-gateway 192.168.1.1
 
-    Port        Vlans allowed and active in management domain
-    Fa0/1       20,30,40,666
-    Fa0/5       20,30,40,666
+После успешной команды 
 
-    Port        Vlans in spanning tree forwarding state and not pruned
-    Fa0/1       20,30,40,666
-    Fa0/5       20,30,40,666
+ping на Lo1 (209.165.200.1) c S1 & S2 смотрим таблицу NAT на R1:
 
-# Часть 4. Настроим маршрутизацию
+    R1#show ip nat translations 
+    Pro  Inside global     Inside local       Outside local      Outside global
+    icmp 209.165.200.227:27192.168.1.11:27    209.165.200.1:27   209.165.200.1:27
+    icmp 209.165.200.227:28192.168.1.11:28    209.165.200.1:28   209.165.200.1:28
+    icmp 209.165.200.227:29192.168.1.11:29    209.165.200.1:29   209.165.200.1:29
+    icmp 209.165.200.227:30192.168.1.11:30    209.165.200.1:30   209.165.200.1:30
+    icmp 209.165.200.228:22192.168.1.12:22    209.135.200.1:22   209.135.200.1:22
+    icmp 209.165.200.228:23192.168.1.12:23    209.135.200.1:23   209.135.200.1:23
+    icmp 209.165.200.228:24192.168.1.12:24    209.135.200.1:24   209.135.200.1:24
+    icmp 209.165.200.228:25192.168.1.12:25    209.135.200.1:25   209.135.200.1:25
 
-4.1 - 4.2 Настраиваем интерфейсы на R1 и R2 согласно задания, результат:
+Далее при попытке одно временного ping R1:Loopback 1 со всех устройств сети R1: PC-A, PC-B, S1 & S2 одно из устройств не может этого сделать т.к. у нас классичесукий динамический NAT который одноременно согласно выделеному пулу адресов может транслировать только 3 адреса т.к. этот NAT клаччический это трансляция один-в-один
 
-    R1#show ip interface brief 
-    Interface              IP-Address      OK? Method Status                Protocol 
-    GigabitEthernet0/0/0   192.20.0.1      YES manual up                    up 
-    GigabitEthernet0/0/1   unassigned      YES NVRAM  up                    up 
-    GigabitEthernet0/0/1.2010.20.0.1       YES manual up                    up 
-    GigabitEthernet0/0/1.3010.30.0.1       YES manual up                    up 
-    GigabitEthernet0/0/1.4010.40.0.1       YES manual up                    up 
-    GigabitEthernet0/0/1.666unassigned      YES unset  up                    up 
-    GigabitEthernet0/0/2   unassigned      YES NVRAM  administratively down down 
-    Loopback1              172.16.1.1      YES manual up                    up 
-    Vlan1                  unassigned      YES unset  administratively down down
+![](Lab_12_2.jpg)
+![](Lab_12_3.jpg)
 
-    R2#show ip interface brief 
-    Interface              IP-Address      OK? Method Status                Protocol 
-    GigabitEthernet0/0/0   unassigned      YES unset  administratively down down 
-    GigabitEthernet0/0/1   10.20.0.4       YES manual up                    up 
-    GigabitEthernet0/0/2   unassigned      YES unset  administratively down down 
-    Vlan1                  unassigned      YES unset  administratively down down
+R1# show ip nat translations verbose 
+Эта команда не отрабатывается в эмуляторе
+
+Далее очищаем NAT
+
+    R1# clear ip nat translations * 
+    R1# clear ip nat statistics (Эта команда не отрабатывается в эмуляторе)
 
 
-# Часть 5. Настроим удаленный доступ.
-
-5.1. Настроим все сетевые устройства для базовой поддержки SSH
-
-Приводится пример для роутера R1 (для всех сетевых устройств аналогично)
-
-                                Настройка инфтерфейса
-    R1(config)# line vty 0 15
-    R1(config-line)# password cisco
-    R1(config-line)# login
-    R1(config-line)# login local
-    R1(config-line)# transport input ssh
-    R1(config-line)# exec-timeout 5 0 
-    R1(config-line)# exit
-
-                                Настройка SSH и доступа
-    R1(config)# no ip domain-lookup
-    R1(config)# ip domain-name ccna-lab.com
-    R1(config)# crypto key generate rsa general-keys modulus 1024
-    R1(config)# ip ssh version 2
-    R1(config)# username SSHadmin privilege 15 secret $cisco123!
-
-5.2. Задания этого пункта 
-
-    R1(config)# ip http secure-server 
-    R1(config)# ip http authentication local
-Не выполняются т.к. Cisco Packet Tracer их не поддерживает
-
-# Часть 6. Проверка подключения.
-
-6.1 - 6.2 По результатм работы проведена проверка согласно таблицы
-![](Lab_11_2.jpg)
-Все этапы успешны. Для проверки работы HTTP за R1 подключен HTTP-сервер.
-
-# Часть 7. Настройка и проверка списков контроля доступа (ACL)
-
-Политика1. Сеть Sales не может использовать SSH в сети Management (но в  другие сети SSH разрешен). 
-
-    Extended IP access list SSH_SALES
-        5 permit tcp any host 172.16.1.1
-        7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
-        10 deny tcp 10.40.0.0 0.0.0.255 any eq 22
-        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
-        20 permit ip any any
-
-    R1(config)#interface g 0/0/1.40
-    R1(config-subif)#ip access-group SSH_SALES in
-
-Политика 2. Сеть Sales не имеет доступа к IP-адресам в сети Management с помощью любого веб-протокола (HTTP/HTTPS). Сеть Sales также не имеет доступа к интерфейсам R1 с помощью любого веб-протокола. Разрешён весь другой веб-трафик (обратите внимание — Сеть Sales  может получить доступ к интерфейсу Loopback 1 на R1).
-
-    Правило 5 политики 1 разрешает доступ из SALES на 172.16.1.1 по HTTP\HTTPS
-        5 permit tcp any host 172.16.1.1
-    Правило 15 политики 1 запрещает вессь HTTP\HTTPS трафик по заданию
-        15 deny tcp 10.40.0.0 0.0.0.255 any eq www
-
-Политика 3. Сеть Sales не может отправлять эхо-запросы ICMP в сети Operations или Management. Разрешены эхо-запросы ICMP к другим адресатам. 
-
-    Правило 7 политики 1 запрещает вессь ICMP трафик в MANAGEMENT
-         7 deny icmp 10.40.0.0 0.0.0.255 10.20.0.0 0.0.0.255
-    Правило 10 политики 4 отрабатываетс задачe по фильтрации ICMP пакетов из SALES в OPERATIONS
-        10 deny icmp any 10.40.0.0 0.0.0.255
-        
-
-Политика 4. Cеть Operations  не может отправлять ICMP эхозапросы в сеть Sales. Разрешены эхо-запросы ICMP к другим адресатам.
-
-    Extended IP access list ICMP_SALES
-    10 deny icmp any 10.40.0.0 0.0.0.255
-    20 permit ip any any
-
-    R1(config)#interface g 0/0/1.30
-    R1(config-subif)#ip access-group ICMP_SALES in
+# Часть 3. Настройка и проверка PAT для IPv4
 
 
-
-Согласно задания внедрены списки доступа
-
-    R1#show access-lists 
-    Extended IP access list SALES_DENY_WEB
-    4 permit icmp 10.40.0.0 0.0.0.255 10.40.0.0 0.0.0.255 (12 match(es))
-    5 permit tcp any 172.16.1.0 0.0.0.255 (34 match(es))
-    6 permit icmp any 172.16.1.0 0.0.0.255 (4 match(es))
-    10 deny tcp 10.20.0.0 0.0.0.255 10.40.0.0 0.0.0.255 eq www
-
-Для проверки их работы согласно таблицы 
-![](Lab_11_3.jpg)
-проведены успешные тесты доступа. Для проверки работы HTTP за R1 подключен HTTP-сервер.
 
    
-Файл схемы сети [здесь](Lab_11.pkt).
+Файл схемы сети часть 2 - Настройка классического NAT [здесь](Lab_12_2.pkt).
+
+Файл схемы сети часть 3 - Настройка NAT c перегрузкой [здесь](Lab_12_3.pkt).
 
 - [Вернуться на основную страницу ](/readme.md)
 
